@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Voice Recognition System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: #0b1220;
+            padding: 30px;
+            border-radius: 15px;
+            width: 420px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            font-size: 22px;
+        }
+
+        button {
+            background: #38bdf8;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+            width: 150px;
+        }
+
+        button:hover {
+            background: #0ea5e9;
+        }
+
+        #status {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #94a3b8;
+        }
+
+        #output {
+            margin-top: 20px;
+            background: #020617;
+            padding: 15px;
+            border-radius: 10px;
+            min-height: 80px;
+            text-align: left;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎤 Voice Recognition System</h1>
+
+    <button onclick="startRecording()">Start</button>
+    <button onclick="stopRecording()">Stop</button>
+
+    <div id="status">Press Start to record</div>
+
+    <div id="output">Recognized text will appear here...</div>
+</div>
+
+<script>
+    let mediaRecorder;
+    let audioChunks = [];
+
+    async function startRecording() {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+
+        mediaRecorder.ondataavailable = event => {
+            audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = sendAudioToServer;
+
+        mediaRecorder.start();
+        document.getElementById("status").innerText = "🎙 Recording...";
+    }
+
+    function stopRecording() {
+        if (mediaRecorder) {
+            mediaRecorder.stop();
+            document.getElementById("status").innerText = "⏳ Processing...";
+        }
+    }
+
+    function sendAudioToServer() {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+
+        const formData = new FormData();
+        formData.append("audio", audioBlob);
+
+        fetch("/predict", {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("status").innerText = "✅ Done";
+            document.getElementById("output").innerText = data.text;
+        })
+        .catch(error => {
+            document.getElementById("status").innerText = "❌ Error";
+            console.error(error);
+        });
+    }
+</script>
+
+</body>
+</html>
